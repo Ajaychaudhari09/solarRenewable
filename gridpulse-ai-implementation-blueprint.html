@@ -1,0 +1,1003 @@
+
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>GRIDPULSE AI — Implementation Blueprint</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #1f2328;
+    background: #ffffff;
+    padding: 32px 16px 48px;
+  }
+  .page { max-width: 760px; margin: 0 auto; }
+
+  /* HEADER */
+  .hero {
+    background: #0f172a;
+    color: #f1f5f9;
+    border-radius: 10px;
+    padding: 32px 28px 24px;
+    margin-bottom: 32px;
+  }
+  .hero-logo { font-size: 11px; font-weight: 700; letter-spacing: 2px; color: #3b82d4; text-transform: uppercase; margin-bottom: 6px; }
+  .hero-title { font-size: 30px; font-weight: 800; letter-spacing: -0.5px; color: #f8fafc; }
+  .hero-tagline { font-size: 15px; color: #94a3b8; margin-top: 6px; font-style: italic; }
+  .hero-meta { display: flex; gap: 24px; margin-top: 20px; flex-wrap: wrap; }
+  .hero-badge {
+    background: rgba(59,130,212,0.15);
+    border: 1px solid rgba(59,130,212,0.35);
+    color: #7eb8f7;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  /* SECTION */
+  .section { margin-bottom: 36px; }
+  .section-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: #57606a;
+    border-bottom: 2px solid #e5e7eb;
+    padding-bottom: 6px;
+    margin-bottom: 16px;
+  }
+  .section-subtitle {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1f2328;
+    margin-bottom: 8px;
+    margin-top: 18px;
+  }
+  p { margin-bottom: 10px; color: #1f2328; }
+
+  /* CARDS */
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; margin-top: 12px; }
+  .card {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 14px 16px;
+  }
+  .card-title { font-size: 12px; font-weight: 700; color: #1f2328; margin-bottom: 4px; }
+  .card-body { font-size: 12px; color: #57606a; line-height: 1.5; }
+
+  /* AGENT TABLE */
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }
+  th {
+    background: #f7f8fa;
+    border-bottom: 2px solid #e5e7eb;
+    padding: 8px 10px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #57606a;
+    text-transform: uppercase;
+  }
+  td { padding: 7px 10px; border-bottom: 1px solid #f0f0f0; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: #fafafa; }
+
+  /* BADGES */
+  .badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+  .badge-critical { background: #fee2e2; color: #991b1b; }
+  .badge-high { background: #ffedd5; color: #9a3412; }
+  .badge-medium { background: #fef9c3; color: #854d0e; }
+  .badge-low { background: #dcfce7; color: #166534; }
+  .badge-full { background: #dbeafe; color: #1e3a5f; }
+  .badge-partial { background: #e0e7ff; color: #3730a3; }
+  .badge-simulated { background: #fce7f3; color: #831843; }
+  .badge-future { background: #f1f5f9; color: #475569; }
+  .badge-granite { background: #ede9fe; color: #4c1d95; }
+  .badge-algo { background: #ecfdf5; color: #065f46; }
+
+  /* FLOW DIAGRAM */
+  .flow {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 12px;
+    font-size: 12px;
+  }
+  .flow-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 4px 0; }
+  .flow-node {
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #1f2328;
+  }
+  .flow-node-blue { border-color: #3b82d4; background: #eff6ff; color: #1d4ed8; }
+  .flow-node-green { border-color: #16a34a; background: #f0fdf4; color: #166534; }
+  .flow-node-red { border-color: #dc2626; background: #fef2f2; color: #991b1b; }
+  .flow-node-purple { border-color: #7c3aed; background: #f5f3ff; color: #4c1d95; }
+  .flow-node-orange { border-color: #ea580c; background: #fff7ed; color: #9a3412; }
+  .flow-arrow { color: #9ca3af; font-size: 13px; font-weight: 700; }
+  .flow-branch { margin-left: 16px; border-left: 2px solid #e5e7eb; padding-left: 12px; margin-top: 4px; }
+  .flow-label { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; color: #57606a; text-transform: uppercase; margin-top: 10px; margin-bottom: 4px; }
+
+  /* TIMELINE */
+  .timeline { margin-top: 12px; }
+  .tl-block {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 0 16px;
+    margin-bottom: 6px;
+  }
+  .tl-time {
+    font-size: 11px;
+    font-weight: 700;
+    color: #3b82d4;
+    padding-top: 4px;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .tl-content {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 12px;
+  }
+  .tl-heading { font-weight: 700; color: #1f2328; font-size: 12.5px; margin-bottom: 4px; }
+  .tl-list { padding-left: 16px; }
+  .tl-list li { margin-bottom: 2px; color: #374151; }
+  .tl-dev { font-size: 10px; margin-top: 6px; }
+  .dev1 { color: #1d4ed8; font-weight: 700; }
+  .dev2 { color: #7c3aed; font-weight: 700; }
+
+  /* CODE BLOCK */
+  pre {
+    background: #0f172a;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 11.5px;
+    line-height: 1.6;
+    overflow-x: auto;
+    margin-top: 8px;
+    font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  }
+  .kw { color: #7dd3fc; }
+  .str { color: #86efac; }
+  .num { color: #fca5a5; }
+  .cmt { color: #64748b; }
+  .key { color: #c4b5fd; }
+
+  /* TIER BOXES */
+  .tier-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+  .tier-box {
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 12px;
+  }
+  .tier1 { background: #eff6ff; border: 1px solid #bfdbfe; }
+  .tier2 { background: #f0fdf4; border: 1px solid #bbf7d0; }
+  .tier3 { background: #fff7ed; border: 1px solid #fed7aa; }
+  .tier4 { background: #f1f5f9; border: 1px solid #cbd5e1; }
+  .tier-label { font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+  .t1l { color: #1d4ed8; }
+  .t2l { color: #166534; }
+  .t3l { color: #9a3412; }
+  .t4l { color: #475569; }
+  .tier-box ul { padding-left: 16px; }
+  .tier-box li { margin-bottom: 2px; }
+
+  /* 2-COL */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+  .col-box {
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 12px;
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+  }
+  .col-title { font-weight: 700; font-size: 12.5px; color: #1f2328; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #e5e7eb; }
+  .col-box ul { padding-left: 16px; }
+  .col-box li { margin-bottom: 3px; color: #374151; }
+
+  /* STACK TABLE */
+  .stack-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+  .stack-cell {
+    background: #f7f8fa;
+    border: 1px solid #e5e7eb;
+    border-radius: 7px;
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+  .stack-cat { font-size: 10px; font-weight: 700; letter-spacing: 0.5px; color: #57606a; text-transform: uppercase; margin-bottom: 4px; }
+  .stack-val { font-weight: 700; color: #1f2328; font-size: 13px; }
+  .stack-why { color: #57606a; font-size: 11px; margin-top: 3px; }
+
+  /* FORMULA BOX */
+  .formula-box {
+    background: #0f172a;
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin-top: 8px;
+  }
+  .formula-line { font-family: monospace; font-size: 12px; color: #e2e8f0; line-height: 1.8; }
+  .formula-label { font-size: 10px; color: #64748b; font-style: italic; margin-top: 4px; }
+
+  /* ALERT BOX */
+  .alert-demo {
+    border-radius: 8px;
+    border-left: 4px solid;
+    padding: 12px 16px;
+    margin-top: 8px;
+    font-size: 12.5px;
+  }
+  .alert-critical { background: #fef2f2; border-color: #dc2626; }
+  .alert-warning { background: #fff7ed; border-color: #ea580c; }
+  .alert-info { background: #eff6ff; border-color: #3b82d4; }
+  .alert-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+  .alert-critical .alert-title { color: #991b1b; }
+  .alert-warning .alert-title { color: #9a3412; }
+  .alert-info .alert-title { color: #1d4ed8; }
+
+  /* Q&A */
+  .qa-block { margin-bottom: 12px; }
+  .qa-q { font-weight: 700; color: #1f2328; font-size: 13px; margin-bottom: 4px; }
+  .qa-a { color: #374151; padding-left: 14px; border-left: 2px solid #3b82d4; font-size: 12.5px; }
+
+  /* FOOTER */
+  .footer {
+    margin-top: 48px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+    text-align: center;
+    font-size: 12px;
+    color: #9ca3af;
+  }
+
+  @media (max-width: 540px) {
+    .tier-grid, .two-col, .stack-grid { grid-template-columns: 1fr; }
+    .tl-block { grid-template-columns: 1fr; }
+    .tl-time { text-align: left; }
+    .hero-title { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  
+  <div class="hero">
+    <div class="hero-logo">Challenge 14 · IBM Hackathon · Energy &amp; Sustainability</div>
+    <div class="hero-title">⚡ GRIDPULSE AI</div>
+    <div class="hero-tagline">"One intelligent command center for every renewable asset."</div>
+    <div class="hero-meta">
+      <span class="hero-badge">24 Specialized AI Agents</span>
+      <span class="hero-badge">Solar + Wind Hybrid</span>
+      <span class="hero-badge">Kutch &amp; Banaskantha</span>
+      <span class="hero-badge">48-Hour Prototype</span>
+      <span class="hero-badge">IBM Granite + Bob + Cloud</span>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">Executive Summary</div>
+    <p>GRIDPULSE AI is an enterprise-scale Agentic AI platform that transforms how solar-wind hybrid parks are operated. It ingests sensor data, weather intelligence, historical performance, and grid telemetry — then routes that information through a 24-agent ecosystem to deliver real-time anomaly detection, predictive maintenance, generation forecasting, grid optimization, and natural-language operational interaction via an IBM Granite-powered Operations Copilot.</p>
+    <p>The platform is architected for the full production vision, but the 48-hour prototype focuses on a tight 12-agent end-to-end chain that is fully functional, demonstrable, and evidences the complete system design to judges.</p>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">Problem Analysis</div>
+    <div class="card-grid">
+      <div class="card"><div class="card-title">Scattered Assets</div><div class="card-body">Solar + wind installations spread across Kutch &amp; Banaskantha with no unified monitoring layer, causing slow fault detection.</div></div>
+      <div class="card"><div class="card-title">Reactive Maintenance</div><div class="card-body">Equipment failures discovered after the fact. No failure-probability scoring or remaining useful-life estimation.</div></div>
+      <div class="card"><div class="card-title">Weather Blind Spots</div><div class="card-body">Generation shortfalls incorrectly blamed on equipment when dust, cloud cover, or wind shifts are the true cause.</div></div>
+      <div class="card"><div class="card-title">Grid Instability Risk</div><div class="card-body">Sudden solar or wind drops create overload/curtailment events. No automated balancing recommendations exist.</div></div>
+      <div class="card"><div class="card-title">No Financial Visibility</div><div class="card-body">Operators cannot quantify revenue impact of deferred maintenance or the ROI of maintenance actions.</div></div>
+      <div class="card"><div class="card-title">Manual Reporting</div><div class="card-body">Operational summaries require hours of manual data collection; no automated carbon-impact reporting exists.</div></div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">User Types &amp; Journeys</div>
+    <table>
+      <tr><th>User</th><th>Primary Need</th><th>Key Views</th></tr>
+      <tr><td><strong>Plant Operator</strong></td><td>Real-time asset status + priority alerts</td><td>Command Center, Asset Map, Alert Center</td></tr>
+      <tr><td><strong>Maintenance Manager</strong></td><td>Failure probability, priority queue, scheduling</td><td>Maintenance Queue, Scheduler, Fault History</td></tr>
+      <tr><td><strong>Grid Manager</strong></td><td>Generation forecast, curtailment risk, balancing</td><td>Grid Intelligence, Hybrid Balance, Storage Panel</td></tr>
+      <tr><td><strong>Executive / Admin</strong></td><td>Revenue, downtime, carbon, KPIs</td><td>Executive Dashboard, Carbon Report, Financial Summary</td></tr>
+    </table>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">Complete 24-Agent Architecture</div>
+
+    <table>
+      <tr><th>#</th><th>Agent</th><th>Core Logic</th><th>48h Status</th><th>IBM Granite?</th></tr>
+
+      <tr><td>1</td><td><strong>Data Quality &amp; Validation</strong></td><td>Missing value detection, outlier flagging, stale-data checks, unit validation</td><td><span class="badge badge-full">FULL</span></td><td>—</td></tr>
+      <tr><td>2</td><td><strong>Sensor Health</strong></td><td>Impossible-value rules, spike detection, comms-failure inference, sensor confidence score</td><td><span class="badge badge-full">FULL</span></td><td>—</td></tr>
+      <tr><td>3</td><td><strong>Solar Asset Performance</strong></td><td>Expected-vs-actual output, irradiance correlation, temperature-corrected efficiency, performance ratio PR = E_actual / (G_poa · A · η)</td><td><span class="badge badge-full">FULL</span></td><td>—</td></tr>
+      <tr><td>4</td><td><strong>Wind Turbine Performance</strong></td><td>Power-curve deviation, capacity-factor calculation, rotor-speed vs wind-speed regression, Cp coefficient</td><td><span class="badge badge-full">FULL</span></td><td>—</td></tr>
+      <tr><td>5</td><td><strong>Weather Intelligence</strong></td><td>Structured weather ingestion (OpenMeteo API / offline CSV), irradiance, cloud cover index, wind vectors, dust proxy</td><td><span class="badge badge-full">FULL</span></td><td>—</td></tr>
+      <tr><td>6</td><td><strong>Solar Generation Forecasting</strong></td><td>Clear-sky model + cloud-cover correction, irradiance forecast → kWh; lightweight linear or polynomial fit on historical data</td><td><span class="badge badge-full">FULL</span></td><td>—</td></tr>
+      <tr><td>7</td><td><strong>Wind Generation Forecasting</strong></td><td>Power-law wind profile, Weibull distribution fit, P50/P90 output with confidence band</td><td><span class="badge badge-full">FULL</span></td><td>—</td></tr>
+      <tr><td>8</td><td><strong>Asset Anomaly Detection</strong></td><td>Z-score + IQR on rolling 24h window; threshold-based classification: Normal / Warning / Critical</td><td><span class="badge badge-full">FULL</span></td><td>—</td></tr>
+      <tr><td>9</td><td><strong>Root Cause Analysis</strong></td><td>Evidence-weighted decision tree; causes ranked by probability using weather + sensor + history context; no hallucination</td><td><span class="badge badge-full">FULL</span></td><td>Explanation only</td></tr>
+      <tr><td>10</td><td><strong>Predictive Maintenance</strong></td><td>Weighted failure-risk score: age, vibration, operating hours, fault history, degradation trend; RUL estimate</td><td><span class="badge badge-full">FULL</span></td><td>—</td></tr>
+      <tr><td>11</td><td><strong>Maintenance Prioritization</strong></td><td>Multi-criteria ranking: failure prob × energy loss × revenue × safety; outputs ordered maintenance queue</td><td><span class="badge badge-full">FULL</span></td><td>—</td></tr>
+      <tr><td>12</td><td><strong>Grid Integration Intelligence</strong></td><td>Demand vs forecast generation comparison, curtailment threshold model, simplified LP for dispatch recommendation</td><td><span class="badge badge-full">FULL</span></td><td>—</td></tr>
+      <tr><td>13</td><td><strong>Energy Loss Impact</strong></td><td>Lost MWh = (Expected - Actual) × hours; Revenue loss = MWh × tariff (₹/kWh); Delay penalty escalation model</td><td><span class="badge badge-full">FULL</span></td><td>—</td></tr>
+      <tr><td>14</td><td><strong>Operations Copilot</strong></td><td>Question intent classification → route to relevant agents → retrieve structured evidence → IBM Granite synthesis</td><td><span class="badge badge-full">FULL</span></td><td><strong>Core</strong></td></tr>
+      <tr><td>15</td><td><strong>Operational Alerting</strong></td><td>Severity routing (Critical/High/Med/Low), evidence payload, impact estimate, recommended action, SSE push</td><td><span class="badge badge-full">FULL</span></td><td>Alert narrative</td></tr>
+      <tr><td>16</td><td><strong>Hybrid Energy Balance</strong></td><td>Solar + wind contribution split, demand-cover ratio, surplus/deficit calculation, storage charge recommendation</td><td><span class="badge badge-partial">PARTIAL</span></td><td>—</td></tr>
+      <tr><td>17</td><td><strong>Maintenance Scheduling</strong></td><td>Low-generation window finder: rank candidate slots by forecast loss; output optimal maintenance window</td><td><span class="badge badge-partial">PARTIAL</span></td><td>Explanation</td></tr>
+      <tr><td>18</td><td><strong>Grid Risk &amp; Stability</strong></td><td>Volatility index on 15-min rolling window, sudden-ramp detection, risk score 0–100 with mitigation flag</td><td><span class="badge badge-partial">PARTIAL</span></td><td>—</td></tr>
+      <tr><td>19</td><td><strong>Financial Optimization</strong></td><td>Maintenance cost vs energy revenue NPV; rank actions by financial return; break-even delay calculator</td><td><span class="badge badge-partial">PARTIAL</span></td><td>Summary</td></tr>
+      <tr><td>20</td><td><strong>Carbon Impact</strong></td><td>CO₂ avoided = MWh_renewable × 0.82 kg/kWh (CEA India grid emission factor); cumulative annual impact</td><td><span class="badge badge-partial">PARTIAL</span></td><td>Report</td></tr>
+      <tr><td>21</td><td><strong>Energy Storage Optimization</strong></td><td>Rule-based: Charge if forecast surplus &gt; threshold; Discharge if forecast deficit; Hold near equilibrium; price-signal layer optional</td><td><span class="badge badge-simulated">SIMULATED</span></td><td>—</td></tr>
+      <tr><td>22</td><td><strong>Renewable Energy Digital Twin</strong></td><td>Expected-state model vs actual-state diff; asset shadow; structured state comparison JSON output</td><td><span class="badge badge-simulated">SIMULATED</span></td><td>—</td></tr>
+      <tr><td>23</td><td><strong>Scenario Simulation</strong></td><td>Parametric what-if engine: inject perturbations (−30% wind, inverter failure, 7-day delay) → re-run affected agents</td><td><span class="badge badge-simulated">SIMULATED</span></td><td>Narrative</td></tr>
+      <tr><td>24</td><td><strong>Executive Insights &amp; Reporting</strong></td><td>Aggregate verified agent outputs → IBM Granite generates daily/weekly structured report in structured Markdown/JSON</td><td><span class="badge badge-simulated">SIMULATED</span></td><td><strong>Core</strong></td></tr>
+    </table>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">Agent I/O Contracts (Selected)</div>
+
+    <div class="section-subtitle">Agent 8 — Anomaly Detection Output Schema</div>
+    <pre><span class="cmt">// AnomalyDetectionResult</span>
+{
+  <span class="key">"asset_id"</span>: <span class="str">"WT-07"</span>,
+  <span class="key">"asset_type"</span>: <span class="str">"wind_turbine"</span>,
+  <span class="key">"timestamp"</span>: <span class="str">"2024-01-15T14:30:00Z"</span>,
+  <span class="key">"observed_output_kw"</span>: <span class="num">412</span>,
+  <span class="key">"expected_output_kw"</span>: <span class="num">503</span>,
+  <span class="key">"deviation_pct"</span>: <span class="num">-18.1</span>,
+  <span class="key">"z_score"</span>: <span class="num">-2.94</span>,
+  <span class="key">"classification"</span>: <span class="str">"CRITICAL"</span>,      <span class="cmt">// Normal / Warning / Critical</span>
+  <span class="key">"vibration_z_score"</span>: <span class="num">3.41</span>,
+  <span class="key">"confidence"</span>: <span class="num">0.87</span>,
+  <span class="key">"trigger_conditions"</span>: [<span class="str">"output_deviation"</span>, <span class="str">"vibration_spike"</span>]
+}</pre>
+
+    <div class="section-subtitle">Agent 10 — Predictive Maintenance Output Schema</div>
+    <pre>{
+  <span class="key">"asset_id"</span>: <span class="str">"WT-07"</span>,
+  <span class="key">"failure_probability"</span>: <span class="num">0.72</span>,
+  <span class="key">"rul_days"</span>: <span class="num">11</span>,
+  <span class="key">"risk_score"</span>: <span class="num">78</span>,               <span class="cmt">// 0–100</span>
+  <span class="key">"maintenance_urgency"</span>: <span class="str">"HIGH"</span>,
+  <span class="key">"contributing_factors"</span>: {
+    <span class="key">"age_score"</span>: <span class="num">0.6</span>,
+    <span class="key">"vibration_score"</span>: <span class="num">0.88</span>,
+    <span class="key">"temp_score"</span>: <span class="num">0.55</span>,
+    <span class="key">"fault_history_score"</span>: <span class="num">0.70</span>,
+    <span class="key">"degradation_trend"</span>: <span class="num">-0.023</span>   <span class="cmt">// kW/day slope</span>
+  },
+  <span class="key">"recommended_window"</span>: <span class="str">"2024-01-16 06:00–10:00"</span>,
+  <span class="key">"estimated_downtime_hrs"</span>: <span class="num">4</span>
+}</pre>
+
+    <div class="section-subtitle">Agent 13 — Energy Loss Impact Output Schema</div>
+    <pre>{
+  <span class="key">"asset_id"</span>: <span class="str">"WT-07"</span>,
+  <span class="key">"lost_mwh_to_date"</span>: <span class="num">4.2</span>,
+  <span class="key">"projected_loss_if_delayed_7d_mwh"</span>: <span class="num">29.4</span>,
+  <span class="key">"revenue_loss_inr"</span>: <span class="num">176400</span>,        <span class="cmt">// @ ₹6/kWh</span>
+  <span class="key">"maintenance_cost_inr"</span>: <span class="num">45000</span>,
+  <span class="key">"net_benefit_of_immediate_action_inr"</span>: <span class="num">131400</span>,
+  <span class="key">"delay_penalty_per_day_inr"</span>: <span class="num">25200</span>
+}</pre>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">Central Orchestrator — Event-Driven Workflow</div>
+    <div class="flow">
+      <div class="flow-label">Ingest Path (every 5 min)</div>
+      <div class="flow-row">
+        <div class="flow-node flow-node-blue">Sensor Data Ingestion</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node">Agent 1: Data Quality</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node">Agent 2: Sensor Health</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node flow-node-blue">Validated Data Bus</div>
+      </div>
+
+      <div class="flow-label">Asset Performance Path</div>
+      <div class="flow-row">
+        <div class="flow-node flow-node-blue">Validated Data Bus</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node">Agent 3: Solar Perf</div>
+        <div class="flow-row" style="margin:0"><div class="flow-arrow">+</div><div class="flow-node">Agent 4: Wind Perf</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node">Agent 8: Anomaly Detection</div>
+      </div>
+
+      <div class="flow-branch">
+        <div class="flow-label">IF ANOMALY DETECTED</div>
+        <div class="flow-row">
+          <div class="flow-node flow-node-red">Agent 9: Root Cause</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node flow-node-red">Agent 10: Predictive Maint</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node flow-node-red">Agent 11: Prioritization</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node flow-node-red">Agent 13: Loss Impact</div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-node flow-node-red">Agent 15: Alert</div>
+        </div>
+      </div>
+
+      <div class="flow-label">Weather + Forecasting Path (parallel)</div>
+      <div class="flow-row">
+        <div class="flow-node flow-node-blue">Weather API / CSV</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node">Agent 5: Weather Intelligence</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-row" style="margin:0">
+          <div class="flow-node">Agent 6: Solar Forecast</div>
+          <div class="flow-arrow">+</div>
+          <div class="flow-node">Agent 7: Wind Forecast</div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node">Agent 16: Hybrid Balance</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node">Agent 12: Grid Intelligence</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node">Agent 18: Grid Risk</div>
+      </div>
+
+      <div class="flow-label">Copilot + Reporting (on demand)</div>
+      <div class="flow-row">
+        <div class="flow-node flow-node-purple">Operator Query</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node flow-node-purple">Agent 14: Copilot (IBM Granite)</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node flow-node-purple">Retrieves verified agent results</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-node flow-node-purple">Natural Language Response</div>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">System Architecture</div>
+    <div class="two-col">
+      <div class="col-box">
+        <div class="col-title">Backend (FastAPI + Python)</div>
+        <ul>
+          <li>Agent orchestrator engine</li>
+          <li>RESTful + Server-Sent Events (SSE) API</li>
+          <li>Forecasting models (numpy/scipy/sklearn)</li>
+          <li>Anomaly detection (statistical)</li>
+          <li>Maintenance scoring logic</li>
+          <li>IBM Granite API client</li>
+          <li>SQLite (prototype) / PostgreSQL (prod)</li>
+          <li>Redis for agent state cache</li>
+        </ul>
+      </div>
+      <div class="col-box">
+        <div class="col-title">Frontend (React + TypeScript)</div>
+        <ul>
+          <li>Command Center dashboard</li>
+          <li>Asset health map (Leaflet.js)</li>
+          <li>Time-series charts (Recharts / ECharts)</li>
+          <li>Alert center with severity filter</li>
+          <li>Agent workflow visualizer</li>
+          <li>Maintenance queue &amp; scheduler</li>
+          <li>Operations Copilot chat pane</li>
+          <li>Scenario simulator panel</li>
+        </ul>
+      </div>
+    </div>
+    <div class="two-col" style="margin-top:10px">
+      <div class="col-box">
+        <div class="col-title">Data Layer</div>
+        <ul>
+          <li>SQLite — asset metadata, maintenance, faults</li>
+          <li>In-memory pandas DataFrames — sensor time series</li>
+          <li>JSON files — agent result cache</li>
+          <li>CSV — offline demo fallback datasets</li>
+          <li>OpenMeteo API — live weather (free, no key)</li>
+        </ul>
+      </div>
+      <div class="col-box">
+        <div class="col-title">IBM Cloud (Hackathon)</div>
+        <ul>
+          <li>IBM watsonx.ai — Granite 13B Instruct</li>
+          <li>IBM Code Engine — FastAPI container</li>
+          <li>IBM Cloud Object Storage — demo datasets</li>
+          <li>IBM App Connect (optional) — event routing</li>
+          <li>HTTPS domain for live judge demo</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">Final Technology Stack</div>
+    <div class="stack-grid">
+      <div class="stack-cell"><div class="stack-cat">Backend</div><div class="stack-val">Python / FastAPI</div><div class="stack-why">Fast to build, great async support, native numpy/sklearn</div></div>
+      <div class="stack-cell"><div class="stack-cat">Frontend</div><div class="stack-val">React + TypeScript</div><div class="stack-why">Fastest path to impressive dashboard with Vite + Tailwind</div></div>
+      <div class="stack-cell"><div class="stack-cat">Charts</div><div class="stack-val">Apache ECharts</div><div class="stack-why">Time-series, heatmap, gauge, geo map in one library</div></div>
+      <div class="stack-cell"><div class="stack-cat">Asset Map</div><div class="stack-val">Leaflet.js</div><div class="stack-why">Free, interactive, works offline with OSM tiles</div></div>
+      <div class="stack-cell"><div class="stack-cat">Database</div><div class="stack-val">SQLite → PostgreSQL</div><div class="stack-why">Zero setup for prototype; migrate to Postgres for prod</div></div>
+      <div class="stack-cell"><div class="stack-cat">Cache</div><div class="stack-val">Redis</div><div class="stack-why">Agent result store, last-known state, pub/sub alerts</div></div>
+      <div class="stack-cell"><div class="stack-cat">LLM</div><div class="stack-val">IBM Granite 13B</div><div class="stack-why">Copilot, RCA explanation, reports, alert narratives</div></div>
+      <div class="stack-cell"><div class="stack-cat">Forecasting</div><div class="stack-val">numpy / scipy / sklearn</div><div class="stack-why">Deterministic models — no hallucinated numbers</div></div>
+      <div class="stack-cell"><div class="stack-cat">Deployment</div><div class="stack-val">IBM Code Engine</div><div class="stack-why">Containerized, fast deploy, no k8s management overhead</div></div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">Database Schema (Core Tables)</div>
+    <pre><span class="cmt">-- Solar Assets</span>
+<span class="kw">CREATE TABLE</span> solar_assets (
+  asset_id <span class="kw">TEXT PRIMARY KEY</span>, site <span class="kw">TEXT</span>, capacity_kw <span class="kw">REAL</span>,
+  panel_count <span class="kw">INT</span>, panel_efficiency_pct <span class="kw">REAL</span>, age_years <span class="kw">REAL</span>,
+  lat <span class="kw">REAL</span>, lon <span class="kw">REAL</span>, inverter_model <span class="kw">TEXT</span>, install_date <span class="kw">DATE</span>
+);
+
+<span class="cmt">-- Wind Turbines</span>
+<span class="kw">CREATE TABLE</span> wind_turbines (
+  turbine_id <span class="kw">TEXT PRIMARY KEY</span>, site <span class="kw">TEXT</span>, rated_capacity_kw <span class="kw">REAL</span>,
+  rotor_diameter_m <span class="kw">REAL</span>, hub_height_m <span class="kw">REAL</span>, cut_in_ms <span class="kw">REAL</span>,
+  rated_wind_ms <span class="kw">REAL</span>, age_years <span class="kw">REAL</span>, lat <span class="kw">REAL</span>, lon <span class="kw">REAL</span>
+);
+
+<span class="cmt">-- Sensor Readings (time-series)</span>
+<span class="kw">CREATE TABLE</span> sensor_readings (
+  id <span class="kw">INTEGER PRIMARY KEY</span>, asset_id <span class="kw">TEXT</span>, ts <span class="kw">DATETIME</span>,
+  output_kw <span class="kw">REAL</span>, temperature_c <span class="kw">REAL</span>, vibration_mm_s <span class="kw">REAL</span>,
+  wind_speed_ms <span class="kw">REAL</span>, irradiance_wm2 <span class="kw">REAL</span>, rotor_rpm <span class="kw">REAL</span>,
+  sensor_quality_flag <span class="kw">INT DEFAULT</span> <span class="num">1</span>   <span class="cmt">-- 1=ok, 0=suspect</span>
+);
+
+<span class="cmt">-- Agent Results Cache</span>
+<span class="kw">CREATE TABLE</span> agent_results (
+  id <span class="kw">INTEGER PRIMARY KEY</span>, agent_name <span class="kw">TEXT</span>, asset_id <span class="kw">TEXT</span>,
+  ts <span class="kw">DATETIME</span>, result_json <span class="kw">TEXT</span>, ttl_seconds <span class="kw">INT</span>
+);
+
+<span class="cmt">-- Maintenance Records</span>
+<span class="kw">CREATE TABLE</span> maintenance (
+  id <span class="kw">INTEGER PRIMARY KEY</span>, asset_id <span class="kw">TEXT</span>, maint_date <span class="kw">DATE</span>,
+  type <span class="kw">TEXT</span>, cost_inr <span class="kw">REAL</span>, downtime_hrs <span class="kw">REAL</span>,
+  technician <span class="kw">TEXT</span>, notes <span class="kw">TEXT</span>
+);</pre>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">Core Algorithms &amp; Formulas</div>
+
+    <div class="section-subtitle">Performance Ratio (Solar)</div>
+    <div class="formula-box">
+      <div class="formula-line">PR = E_actual / (G_poa × A × η_stc)</div>
+      <div class="formula-line">Underperformance if PR &lt; 0.75 (Warning) or PR &lt; 0.60 (Critical)</div>
+      <div class="formula-label">G_poa = irradiance on panel surface (W/m²) · A = total panel area (m²) · η_stc = nameplate efficiency</div>
+    </div>
+
+    <div class="section-subtitle">Wind Power Output</div>
+    <div class="formula-box">
+      <div class="formula-line">P = 0.5 × ρ × A_rotor × Cp × v³</div>
+      <div class="formula-line">Cp target: 0.35–0.45 · Deviation &gt;15% from power curve = Warning</div>
+      <div class="formula-label">ρ = air density (1.225 kg/m³) · A_rotor = π·r² · Cp = power coefficient · v = wind speed (m/s)</div>
+    </div>
+
+    <div class="section-subtitle">Failure Risk Score (Predictive Maintenance)</div>
+    <div class="formula-box">
+      <div class="formula-line">R = w1·age_score + w2·vibration_score + w3·temp_score + w4·fault_score + w5·degradation_score</div>
+      <div class="formula-line">Default weights: [0.15, 0.30, 0.20, 0.25, 0.10] · R ∈ [0,1]</div>
+      <div class="formula-label">Scores normalized to [0,1]. Weights tunable per asset type (wind vs solar different defaults).</div>
+    </div>
+
+    <div class="section-subtitle">Anomaly Detection (Z-score)</div>
+    <div class="formula-box">
+      <div class="formula-line">z = (x - μ_rolling24h) / σ_rolling24h</div>
+      <div class="formula-line">|z| &gt; 2.0 → Warning · |z| &gt; 3.0 → Critical</div>
+      <div class="formula-label">Rolling 24-hour window with minimum 12 observations required for statistical validity.</div>
+    </div>
+
+    <div class="section-subtitle">Carbon Impact</div>
+    <div class="formula-box">
+      <div class="formula-line">CO2_avoided_kg = MWh_renewable × 820   (CEA India grid emission factor 2023)</div>
+      <div class="formula-line">Additional_CO2_from_maintenance = (MWh_recovered_by_maintenance) × 820</div>
+      <div class="formula-label">Source: Central Electricity Authority, CO2 Baseline Database for Indian Power Sector, 2023.</div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">IBM Granite Integration Strategy</div>
+    <table>
+      <tr><th>Use Case</th><th>Input to Granite</th><th>Output</th><th>Hallucination Guard</th></tr>
+      <tr><td>Operations Copilot query</td><td>Question + structured agent results (JSON)</td><td>Natural language explanation with cited evidence</td><td>System prompt: "Only use data provided. Do not invent numbers."</td></tr>
+      <tr><td>Root Cause Explanation</td><td>RCA decision-tree output (ranked causes + scores)</td><td>Plain-English explanation for operator</td><td>Granite receives finalized scores; cannot change rankings</td></tr>
+      <tr><td>Maintenance Recommendation Narrative</td><td>Priority score, RUL, financial impact JSON</td><td>Human-readable maintenance recommendation</td><td>All numbers pre-validated; Granite only writes prose</td></tr>
+      <tr><td>Daily Executive Report</td><td>Aggregated daily metrics JSON from all agents</td><td>Structured Markdown report</td><td>Post-generation numeric consistency check</td></tr>
+      <tr><td>Alert Narrative</td><td>Alert severity + evidence payload</td><td>Operator-readable alert message</td><td>Severity + asset ID locked by alerting agent</td></tr>
+    </table>
+    <p style="margin-top:10px;color:#57606a;font-size:12px"><strong>Key principle:</strong> IBM Granite is the <em>communication layer</em>, not the <em>decision layer</em>. Every number, score, forecast, and classification is produced by deterministic or statistical code before Granite ever sees it.</p>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">IBM Bob Development Strategy</div>
+    <div class="card-grid">
+      <div class="card"><div class="card-title">Architecture Generation</div><div class="card-body">Scaffold agent classes, orchestrator, API routes, and data models from spec in minutes.</div></div>
+      <div class="card"><div class="card-title">Data Simulation</div><div class="card-body">Generate realistic sensor CSV datasets for 20 solar assets + 10 wind turbines with embedded anomalies.</div></div>
+      <div class="card"><div class="card-title">Agent Implementation</div><div class="card-body">Implement each agent's scoring logic with Bob's code-gen + inline review loop.</div></div>
+      <div class="card"><div class="card-title">API Development</div><div class="card-body">FastAPI endpoint generation, Pydantic schema validation, SSE push stream setup.</div></div>
+      <div class="card"><div class="card-title">Frontend Components</div><div class="card-body">React dashboard components: ECharts wrappers, Leaflet asset map, alert center, copilot chat.</div></div>
+      <div class="card"><div class="card-title">Test Generation</div><div class="card-body">Unit tests for every agent's scoring formula + integration tests for the full agent pipeline.</div></div>
+      <div class="card"><div class="card-title">Debugging</div><div class="card-body">Bob inline debugging for agent orchestration edge cases, SSE stream issues, CORS fixes.</div></div>
+      <div class="card"><div class="card-title">IBM Cloud Deploy</div><div class="card-body">Dockerfile generation, Code Engine deployment YAML, watsonx.ai API integration boilerplate.</div></div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">Feature Prioritization</div>
+    <div class="tier-grid">
+      <div class="tier-box tier1">
+        <div class="tier-label t1l">Tier 1 — Build First (Hours 0–18)</div>
+        <ul>
+          <li>Data simulation (20 solar + 10 wind)</li>
+          <li>Agents 1–8 (data quality → anomaly)</li>
+          <li>Agents 10–11 (maintenance + priority)</li>
+          <li>Agent 13 (loss impact)</li>
+          <li>Agent 15 (alerting)</li>
+          <li>Command Center dashboard</li>
+          <li>Asset health list view</li>
+          <li>Alert center</li>
+          <li>FastAPI + SSE push</li>
+        </ul>
+      </div>
+      <div class="tier-box tier2">
+        <div class="tier-label t2l">Tier 2 — After Core Stable (Hours 18–32)</div>
+        <ul>
+          <li>Agents 5, 6, 7 (weather + forecasting)</li>
+          <li>Agent 9 (root cause analysis)</li>
+          <li>Agent 12 (grid intelligence)</li>
+          <li>Agent 14 (Granite Copilot)</li>
+          <li>Generation forecast charts</li>
+          <li>Maintenance queue + scheduler</li>
+          <li>Asset health map (Leaflet)</li>
+          <li>Agent workflow visualizer</li>
+        </ul>
+      </div>
+      <div class="tier-box tier3">
+        <div class="tier-label t3l">Tier 3 — Stretch (Hours 32–42)</div>
+        <ul>
+          <li>Agent 16 (hybrid balance)</li>
+          <li>Agent 17 (maintenance scheduling)</li>
+          <li>Agent 18 (grid risk)</li>
+          <li>Agent 19–20 (financial, carbon)</li>
+          <li>Scenario simulator panel</li>
+          <li>Agent 23–24 (simulation, reports)</li>
+          <li>Digital twin visual</li>
+          <li>Risk heatmap</li>
+        </ul>
+      </div>
+      <div class="tier-box tier4">
+        <div class="tier-label t4l">Tier 4 — Production Roadmap</div>
+        <ul>
+          <li>Real SCADA / IEC 61400 data ingestion</li>
+          <li>ML-based failure prediction (LSTM)</li>
+          <li>Full LP grid dispatch optimization</li>
+          <li>Kafka event streaming</li>
+          <li>TimescaleDB time-series storage</li>
+          <li>Multi-site federation</li>
+          <li>Mobile alerts</li>
+          <li>Regulatory reporting (CERC)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">48-Hour Two-Person Development Schedule</div>
+    <div class="timeline">
+
+      <div class="tl-block">
+        <div class="tl-time">Hour 0–2</div>
+        <div class="tl-content">
+          <div class="tl-heading">Architecture Freeze &amp; Contracts</div>
+          <ul class="tl-list">
+            <li>Finalize JSON schemas for all 15 TIER-1/2 agents</li>
+            <li>Define API routes + SSE event names</li>
+            <li>Create Git repo, project structure, shared types</li>
+            <li>Generate offline demo dataset spec (with IBM Bob)</li>
+          </ul>
+          <div class="tl-dev"><span class="dev1">Dev 1 (AI/Backend)</span> + <span class="dev2">Dev 2 (Frontend)</span>: Both together — nothing parallel yet</div>
+        </div>
+      </div>
+
+      <div class="tl-block">
+        <div class="tl-time">Hour 2–6</div>
+        <div class="tl-content">
+          <div class="tl-heading">Project Setup &amp; Mock Data</div>
+          <ul class="tl-list">
+            <li class="dev1">Dev 1: FastAPI skeleton, SQLite schema, generate 30-day sensor CSV for 30 assets (IBM Bob), simulate 3 embedded anomalies + 1 failure trajectory</li>
+            <li class="dev2">Dev 2: React + Vite + Tailwind setup, ECharts install, Leaflet, static wireframe for Command Center</li>
+          </ul>
+          <div class="tl-dev"><strong>DoD:</strong> API returns mock JSON, frontend renders placeholder dashboard</div>
+        </div>
+      </div>
+
+      <div class="tl-block">
+        <div class="tl-time">Hour 6–12</div>
+        <div class="tl-content">
+          <div class="tl-heading">Parallel Core Development</div>
+          <ul class="tl-list">
+            <li class="dev1">Dev 1: Implement Agents 1–4 (Data Quality, Sensor Health, Solar Perf, Wind Perf). Implement Agent 8 (Anomaly Detection). Run against simulated CSV. All output to agent_results table.</li>
+            <li class="dev2">Dev 2: Build Command Center layout (top KPI row, asset list, alert center). Wire SSE connection. Stub out all remaining pages. Asset health color-coding (green/yellow/red).</li>
+          </ul>
+          <div class="tl-dev"><strong>DoD:</strong> Agents 1–4 + 8 pass unit tests; frontend shows live anomaly cards from SSE</div>
+        </div>
+      </div>
+
+      <div class="tl-block">
+        <div class="tl-time">Hour 12–18</div>
+        <div class="tl-content">
+          <div class="tl-heading">Agent Pipeline Integration</div>
+          <ul class="tl-list">
+            <li class="dev1">Dev 1: Implement Agents 9, 10, 11, 13, 15 (RCA, Maintenance, Priority, Loss Impact, Alerting). Wire full anomaly chain. Test end-to-end WT-07 scenario.</li>
+            <li class="dev2">Dev 2: Maintenance queue page, alert detail panel (with evidence + impact), Leaflet asset map with health markers. Wire all endpoints.</li>
+          </ul>
+          <div class="tl-dev"><strong>DoD:</strong> WT-07 anomaly triggers full chain through to alert with financial impact displayed in UI</div>
+        </div>
+      </div>
+
+      <div class="tl-block">
+        <div class="tl-time">Hour 18–24</div>
+        <div class="tl-content">
+          <div class="tl-heading">First End-to-End Working Prototype ✓</div>
+          <ul class="tl-list">
+            <li class="dev1">Dev 1: Add Agents 5, 6, 7 (Weather + Forecasting). OpenMeteo API + offline CSV fallback. POST /forecast endpoint.</li>
+            <li class="dev2">Dev 2: Generation forecast chart (48h, solar+wind+hybrid), integrate maintenance scheduling view. Full demo rehearsal of first scenario.</li>
+          </ul>
+          <div class="tl-dev"><strong>DoD:</strong> Complete end-to-end demo from anomaly detection to maintenance recommendation with forecast chart live</div>
+        </div>
+      </div>
+
+      <div class="tl-block">
+        <div class="tl-time">Hour 24–32</div>
+        <div class="tl-content">
+          <div class="tl-heading">Advanced Agents &amp; IBM Granite Copilot</div>
+          <ul class="tl-list">
+            <li class="dev1">Dev 1: Implement Agent 12 (Grid Intelligence), Agent 14 (Granite Copilot — watsonx.ai API integration), Agent 16 (Hybrid Balance). Prompt engineering for Copilot.</li>
+            <li class="dev2">Dev 2: Grid Intelligence panel, Hybrid Balance chart, Operations Copilot chat pane with streaming response display. Agent workflow visualizer (pipeline diagram).</li>
+          </ul>
+          <div class="tl-dev"><strong>DoD:</strong> Operator can ask "Why should I inspect WT-07?" and receive a Granite-generated evidence-based answer</div>
+        </div>
+      </div>
+
+      <div class="tl-block">
+        <div class="tl-time">Hour 32–38</div>
+        <div class="tl-content">
+          <div class="tl-heading">Dashboard Intelligence + Carbon + Financial</div>
+          <ul class="tl-list">
+            <li class="dev1">Dev 1: Implement Agents 17, 18, 19, 20 (Scheduling, Grid Risk, Financial, Carbon). Executive report generation endpoint.</li>
+            <li class="dev2">Dev 2: Executive Dashboard page (revenue, downtime, carbon KPIs), risk heatmap, maintenance ROI chart, carbon impact panel.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tl-block">
+        <div class="tl-time">Hour 38–42</div>
+        <div class="tl-content">
+          <div class="tl-heading">Scenario Simulation + Agent Visualization</div>
+          <ul class="tl-list">
+            <li class="dev1">Dev 1: Scenario simulation endpoint — parametric perturbation engine for 4 predefined scenarios.</li>
+            <li class="dev2">Dev 2: Scenario simulator UI panel, animated agent pipeline flow diagram showing data flowing through agents.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tl-block">
+        <div class="tl-time">Hour 42–45</div>
+        <div class="tl-content">
+          <div class="tl-heading">Testing &amp; Offline Fallback</div>
+          <ul class="tl-list">
+            <li>Unit tests for all 15 core agents</li>
+            <li>Integration test: full WT-07 demo chain</li>
+            <li>Offline mode: force CSV-only, disable all external APIs</li>
+            <li>Edge case: missing sensor data, API timeout graceful fallback</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tl-block">
+        <div class="tl-time">Hour 45–47</div>
+        <div class="tl-content">
+          <div class="tl-heading">Deployment (IBM Code Engine)</div>
+          <ul class="tl-list">
+            <li>Containerize FastAPI + React (Bob-generated Dockerfile)</li>
+            <li>Push to IBM Code Engine</li>
+            <li>Configure watsonx.ai credentials via environment variables</li>
+            <li>Final smoke test on deployed URL</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="tl-block">
+        <div class="tl-time">Hour 47–48</div>
+        <div class="tl-content">
+          <div class="tl-heading">Demo Rehearsal</div>
+          <ul class="tl-list">
+            <li>Full 3-minute demo run × 3 times</li>
+            <li>Confirm offline fallback works if network fails</li>
+            <li>Prepare likely judge question answers</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">3-Minute Demo Script</div>
+
+    <div class="alert-demo alert-critical">
+      <div class="alert-title">🔴 CRITICAL — Wind Turbine W-07 · Abnormal Vibration + 18% Output Drop</div>
+      Agent 8 (Anomaly Detection) detected: z-score = −2.94 on output, vibration z-score = +3.41<br />
+      Agent 9 (Root Cause): Mechanical bearing degradation (72% confidence) · Weather cleared (irradiance/wind normal)<br />
+      Agent 10 (Predictive Maint): Failure probability 72% · RUL = 11 days<br />
+      Agent 13 (Loss Impact): Lost 4.2 MWh · Revenue risk ₹1,76,400 if delayed 7 days<br />
+      Agent 15 (Alert): Inspect within 24 hours
+    </div>
+
+    <div class="alert-demo alert-warning" style="margin-top:8px">
+      <div class="alert-title">🟠 Weather Change Detected — Solar generation drop forecast</div>
+      Agent 5 (Weather): Cloud cover rising to 78% by 14:00 · Wind speed increasing to 9.2 m/s<br />
+      Agent 6 (Solar Forecast): −34% generation expected next 4 hours<br />
+      Agent 7 (Wind Forecast): +22% wind generation expected · Net hybrid: manageable<br />
+      Agent 12 (Grid): Recommend discharge storage buffer to cover solar shortfall
+    </div>
+
+    <div class="alert-demo alert-info" style="margin-top:8px">
+      <div class="alert-title">💬 Operator asks: "Why should I inspect Turbine W-07 before tomorrow?"</div>
+      Agent 14 (Copilot) retrieves: Anomaly evidence + RCA + Maintenance score + Financial impact<br />
+      IBM Granite generates: <em>"WT-07 has shown abnormal vibration patterns (3.4σ above baseline) combined with an 18% output shortfall for the past 6 hours. The Root Cause agent has identified bearing degradation as the most likely cause with 72% confidence. The Predictive Maintenance agent estimates a failure probability of 72% within 11 days. Delaying inspection by 7 days risks an additional ₹1,76,400 in lost revenue. The next low-generation window is tomorrow morning 06:00–10:00, minimizing downtime impact."</em>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">Likely Judge Questions &amp; Answers</div>
+
+    <div class="qa-block">
+      <div class="qa-q">Q: Why did you build 24 agents instead of just using IBM Granite for everything?</div>
+      <div class="qa-a">IBM Granite is an LLM — it cannot reliably produce precise numerical forecasts, failure probability scores, or financial calculations. Every critical number in GRIDPULSE AI is produced by deterministic statistical code. Granite handles only what LLMs genuinely excel at: synthesizing structured evidence into human-readable explanations. This is the correct separation of concerns for a safety-relevant operational system.</div>
+    </div>
+    <div class="qa-block">
+      <div class="qa-q">Q: How is this different from a dashboard with a chatbot?</div>
+      <div class="qa-a">A dashboard shows data. GRIDPULSE AI acts on data through an agent pipeline. The anomaly detection agent triggers the root cause agent, which feeds the maintenance agent, which triggers the financial impact calculation, which generates a prioritized action recommendation — all automatically, before the operator even opens the dashboard. The copilot then explains why, not just what.</div>
+    </div>
+    <div class="qa-block">
+      <div class="qa-q">Q: Your data is simulated — is this real?</div>
+      <div class="qa-a">The sensor data is simulated with realistic statistical properties matching Gujarat solar irradiance (IMD data), Kutch wind profiles (NIWE data), and IEC-standard turbine power curves. The algorithms are real — PR calculation, Z-score anomaly detection, Weibull wind distribution, CEA emission factors. Simulation is the standard approach in energy hackathons where live SCADA access is not feasible within 48 hours.</div>
+    </div>
+    <div class="qa-block">
+      <div class="qa-q">Q: What would you need to deploy this in production?</div>
+      <div class="qa-a">Replace simulated sensor feeds with SCADA/OPC-UA integration. Add Kafka for event streaming, TimescaleDB for time-series storage, and authentication. The agent architecture is already designed for this — each agent is a stateless service that consumes and produces JSON, making them independently deployable.</div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">Limitations &amp; Honest Disclosures</div>
+    <div class="card-grid">
+      <div class="card"><div class="card-title">Simulated Sensor Data</div><div class="card-body">No live SCADA connection. Data reflects realistic distributions but is not from a real park. Clearly labeled in UI as "DEMO MODE".</div></div>
+      <div class="card"><div class="card-title">Forecasting Accuracy</div><div class="card-body">Linear + Weibull models are sound for prototyping. Production would benefit from LSTM or transformer-based models with longer history.</div></div>
+      <div class="card"><div class="card-title">Failure Probability</div><div class="card-body">Weighted scoring model is explainable and defensible, but a real predictive maintenance model would be trained on actual failure event history.</div></div>
+      <div class="card"><div class="card-title">Grid Optimization</div><div class="card-body">Simplified LP dispatch model. Production grid optimization requires SCADA-connected real-time grid state and certified dispatch algorithms.</div></div>
+    </div>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">One-Month Future Roadmap</div>
+    <table>
+      <tr><th>Week</th><th>Focus</th><th>Key Deliverable</th></tr>
+      <tr><td>Week 1</td><td>Real Data Integration</td><td>OPC-UA / SCADA connector, OpenMeteo live feed, historical data backfill</td></tr>
+      <tr><td>Week 2</td><td>ML Upgrade</td><td>LSTM failure prediction, Prophet-based generation forecasting, anomaly model retraining pipeline</td></tr>
+      <tr><td>Week 3</td><td>Production Infrastructure</td><td>Kafka streams, TimescaleDB, PostgreSQL migration, user authentication, role-based access</td></tr>
+      <tr><td>Week 4</td><td>Field Validation</td><td>Pilot deployment at one site, ground-truth comparison, precision/recall analysis of anomaly detection</td></tr>
+    </table>
+  </div>
+
+  
+  <div class="section">
+    <div class="section-title">Final Implementation Checklist</div>
+    <div class="two-col">
+      <div class="col-box">
+        <div class="col-title">Backend Checklist</div>
+        <ul>
+          <li>☐ FastAPI project scaffold</li>
+          <li>☐ SQLite schema initialized</li>
+          <li>☐ 30-day sensor simulation CSV</li>
+          <li>☐ Agent 1: Data Quality</li>
+          <li>☐ Agent 2: Sensor Health</li>
+          <li>☐ Agent 3: Solar Performance</li>
+          <li>☐ Agent 4: Wind Performance</li>
+          <li>☐ Agent 5: Weather Intelligence</li>
+          <li>☐ Agent 6: Solar Forecasting</li>
+          <li>☐ Agent 7: Wind Forecasting</li>
+          <li>☐ Agent 8: Anomaly Detection</li>
+          <li>☐ Agent 9: Root Cause Analysis</li>
+          <li>☐ Agent 10: Predictive Maintenance</li>
+          <li>☐ Agent 11: Maintenance Priority</li>
+          <li>☐ Agent 12: Grid Intelligence</li>
+          <li>☐ Agent 13: Loss Impact</li>
+          <li>☐ Agent 14: Granite Copilot</li>
+          <li>☐ Agent 15: Operational Alerting</li>
+          <li>☐ SSE push endpoint</li>
+          <li>☐ Offline demo mode flag</li>
+          <li>☐ Unit tests for all agents</li>
+          <li>☐ Dockerfile + Code Engine config</li>
+        </ul>
+      </div>
+      <div class="col-box">
+        <div class="col-title">Frontend Checklist</div>
+        <ul>
+          <li>☐ React + Vite + Tailwind setup</li>
+          <li>☐ Command Center (KPIs + alerts)</li>
+          <li>☐ Asset list with health badges</li>
+          <li>☐ Alert center (severity filter)</li>
+          <li>☐ Leaflet asset map</li>
+          <li>☐ Generation forecast chart (48h)</li>
+          <li>☐ Maintenance queue page</li>
+          <li>☐ Maintenance scheduler</li>
+          <li>☐ Asset detail panel</li>
+          <li>☐ Grid intelligence panel</li>
+          <li>☐ Hybrid balance chart</li>
+          <li>☐ Operations Copilot chat pane</li>
+          <li>☐ Agent workflow visualizer</li>
+          <li>☐ Executive dashboard</li>
+          <li>☐ Carbon impact panel</li>
+          <li>☐ Scenario simulator panel</li>
+          <li>☐ SSE live update wiring</li>
+          <li>☐ Offline demo mode indicator</li>
+          <li>☐ Responsive layout (tablets)</li>
+          <li>☐ Demo scenario auto-trigger button</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Made with IBM Bob</div>
+</div>
+</body>
+</html>
