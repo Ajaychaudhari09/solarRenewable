@@ -15,11 +15,15 @@ class OperationsCopilotAgent(BaseAgent):
 
     def _run(self, inputs: Dict[str, Any]) -> Dict[str, Any]:
         question = inputs.get("question", "")
+        language = inputs.get("language", "en")
+        user_mode = inputs.get("user_mode", "operator")   # operator | simple | rooftop
         context = inputs.get("agent_context", {})
         granite_service = inputs.get("granite_service")
 
         # Build structured context from agent results
         structured = self._build_context(context)
+        structured["user_mode"] = user_mode
+        structured["language"] = language
 
         # Try Granite, fall back to deterministic
         if granite_service:
@@ -34,12 +38,18 @@ class OperationsCopilotAgent(BaseAgent):
             answer = self._deterministic_answer(question, structured)
             source = "deterministic_fallback"
 
+        # Translate response preamble for simple mode
+        if user_mode == "simple" and source == "deterministic_fallback":
+            answer = self._simplify_answer(answer)
+
         return {
             "confidence": structured.get("confidence", 0.8),
             "results": {
                 "question": question,
                 "answer": answer,
                 "source": source,
+                "user_mode": user_mode,
+                "language": language,
                 "context_used": structured,
                 "relevant_assets": structured.get("relevant_assets", []),
                 "timestamp": inputs.get("timestamp", ""),
@@ -47,6 +57,22 @@ class OperationsCopilotAgent(BaseAgent):
             "evidence": structured.get("evidence", []),
             "warnings": ["Granite unavailable — using deterministic fallback"] if source == "deterministic_fallback" else [],
         }
+
+    def _simplify_answer(self, answer: str) -> str:
+        """Make operator-mode answer more readable for non-technical users."""
+        # Replace jargon
+        replacements = {
+            "performance_ratio": "how well your system is working",
+            "predictive maintenance": "preventive check-up",
+            "anomaly": "unusual reading",
+            "failure probability": "chance of breakdown",
+            "curtailment": "grid-limited generation",
+            "Z-score": "statistical deviation",
+            "bearing_wear": "mechanical wear",
+        }
+        for term, plain in replacements.items():
+            answer = answer.replace(term, plain)
+        return answer
 
     def _build_context(self, context: Dict) -> Dict:
         alerts = context.get("alerts", {}).get("results", {}).get("alerts", [])

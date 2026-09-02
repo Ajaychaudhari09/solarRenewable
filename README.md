@@ -1,7 +1,7 @@
 # GridPulse AI
 ### Smart Renewable Energy Intelligence Platform for Solar-Wind Hybrid Energy Parks
 
-> **IBM Hackathon — Challenge 14:** Smart Renewable Energy (Solar-Wind Hybrid) Asset Monitoring for Kutch & Banaskantha
+> **IBM Hackathon — Challenge 14:** Smart Renewable Energy (Solar-Wind Hybrid) Asset Monitoring for Kutch & Banaskantha, Gujarat, India
 
 [![Backend: Python 3.10 + FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688)](https://fastapi.tiangolo.com)
 [![Frontend: React + Vite + TypeScript](https://img.shields.io/badge/Frontend-React%20%2B%20Vite-61DAFB)](https://vitejs.dev)
@@ -33,6 +33,18 @@ It continuously reasons over 16 wind turbines and 15 solar inverters (total ~37.
 | Hybrid solar-wind optimization | Agent 18: Hybrid Balance Optimization |
 | Grid integration | Agents 16–17: Grid Integration + Risk |
 | Operational intelligence | Agent 24: IBM Granite Operations Copilot |
+
+---
+
+## Quick Start (Windows)
+
+```
+1. Clone repository
+2. Double-click  RUN_GRIDPULSE.bat
+3. Browser opens automatically at http://localhost:5173
+```
+
+To stop: double-click `STOP_GRIDPULSE.bat` or close the two terminal windows.
 
 ---
 
@@ -97,6 +109,20 @@ Telemetry Tick
 | 26 | Scenario Simulation | What-if scenario analysis |
 | 27 | Human Approval | Escalation — critical items need operator sign-off |
 | 28 | Feedback Learning | Records AI predictions vs actual outcomes |
+
+---
+
+## New Features (v2)
+
+| Feature | Description |
+|---|---|
+| 🇮🇳 India Location System | 5 Gujarat locations with real solar/wind data (Kutch, Banaskantha, Ahmedabad, Rajkot, Surat) |
+| 🏠 Rooftop Solar Analyzer | For homeowners and businesses — capacity, savings, CO₂ impact |
+| 👤 Simple Mode | Plain-language explanations for non-technical users |
+| ⚙️ Operator Mode | Full technical analytics for professionals |
+| 💬 Multilingual Copilot | English / Hindi / Gujarati language selection |
+| 🌦️ India Weather Context | Season-aware weather explanations for renewable implications |
+| 📊 India Renewable Stats | MNRE/CEA reference data on India and Gujarat renewable capacity |
 
 ---
 

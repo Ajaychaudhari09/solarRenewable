@@ -28,7 +28,7 @@ function Section({ title, children }: any) {
   );
 }
 
-export default function AssetDetail({ assetId, onBack }: AssetDetailProps) {
+export default function AssetDetail({ assetId, onBack, userMode = 'operator' }: AssetDetailProps & { userMode?: string }) {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 

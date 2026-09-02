@@ -390,7 +390,9 @@ class Orchestrator:
 
         return result
 
-    def ask_copilot(self, question: str) -> Dict[str, Any]:
+    def ask_copilot(self, question: str,
+                    language: str = "en",
+                    user_mode: str = "operator") -> Dict[str, Any]:
         """Run the Operations Copilot against latest analytical context."""
         if not self._last_result:
             self.run_tick()
@@ -401,6 +403,8 @@ class Orchestrator:
 
         return self.copilot.run({
             "question": question,
+            "language": language,
+            "user_mode": user_mode,
             "timestamp": ts,
             "generation": gen,
             "agent_context": {

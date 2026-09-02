@@ -37,4 +37,26 @@ export const api = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(scenario),
     }).then(r => r.json()),
+
+  copilotV2: (question: string, language = 'en', userMode = 'operator') =>
+    fetch(`${API}/api/copilot/v2`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ question, language, user_mode: userMode }),
+    }).then(r => r.json()),
+
+  indiaLocations: () => fetch(`${API}/api/india/locations`).then(r => r.json()),
+  indiaLocation: (id: string) => fetch(`${API}/api/india/location/${id}`).then(r => r.json()),
+  indiaWeatherContext: (locationId = 'kutch') =>
+    fetch(`${API}/api/india/weather-context?location_id=${locationId}`).then(r => r.json()),
+  indiaRenewableStats: () => fetch(`${API}/api/india/renewable-stats`).then(r => r.json()),
+
+  analyzeRooftop: (params: Record<string, unknown>) =>
+    fetch(`${API}/api/rooftop/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    }).then(r => r.json()),
+
+  graniteStatus: () => fetch(`${API}/api/granite-status`).then(r => r.json()),
 };

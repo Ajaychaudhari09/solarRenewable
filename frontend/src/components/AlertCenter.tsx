@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../api';
 
-export default function AlertCenter() {
+export default function AlertCenter({ userMode = 'operator' }: { userMode?: string }) {
   const [data, setData] = useState<any>(null);
 
   useEffect(() => {

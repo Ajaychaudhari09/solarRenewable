@@ -21,6 +21,8 @@ from typing import Optional, Dict, Any, List
 
 from orchestration.orchestrator import Orchestrator
 from services.granite_service import create_granite_service
+from services.india_locations import get_all_locations, get_location, location_weather_adjustment
+from services.rooftop_solar import calculate_rooftop_performance, calculate_savings, get_health_summary_simple
 from simulation.engine import WIND_TURBINES, SOLAR_FARMS, SOLAR_INVERTERS, BATTERY, GRID
 
 # ─────────────────────────────────────────────
@@ -62,6 +64,8 @@ else:
 
 class CopilotRequest(BaseModel):
     question: str
+    language: str = "en"      # en | hi | gu
+    user_mode: str = "operator"  # operator | simple | rooftop
 
 class FaultInjectionRequest(BaseModel):
     fault_type: str  # wt07_bearing | solar_underperformance | severe_weather | grid_constraint | sensor_failure
@@ -388,6 +392,206 @@ def get_park_config():
         "solar_inverters": SOLAR_INVERTERS,
         "battery": BATTERY,
         "grid": GRID,
+    }
+
+
+# ─────────────────────────────────────────────
+# India-focused endpoints
+# ─────────────────────────────────────────────
+
+@app.get("/api/india/locations")
+def india_locations():
+    """Return all supported India locations."""
+    return {"locations": get_all_locations()}
+
+
+@app.get("/api/india/location/{location_id}")
+def india_location_detail(location_id: str):
+    """Return detailed info for a specific Indian location."""
+    loc = get_location(location_id)
+    return loc
+
+
+@app.get("/api/india/weather-context")
+def india_weather_context(location_id: str = "kutch"):
+    """Return weather context and renewable implications for an Indian location."""
+    from datetime import datetime
+    loc = get_location(location_id)
+    result = orchestrator.get_last_result()
+    weather = result.get("telemetry", {}).get("weather", {}) if result else {}
+
+    irr = weather.get("irradiance_wm2", 600)
+    wind = weather.get("wind_speed_ms", 7.5)
+    temp = weather.get("temperature_c", 32)
+    cloud = weather.get("cloud_cover_pct", 15)
+
+    month = datetime.utcnow().month
+    adj = location_weather_adjustment(location_id, irr, wind, month)
+
+    # Solar implications
+    if irr > 700:
+        solar_implication = "Excellent solar conditions — expect strong generation."
+    elif irr > 400:
+        solar_implication = "Good solar conditions — generation near expected levels."
+    elif irr > 150:
+        solar_implication = "Moderate solar conditions — cloud cover is reducing generation."
+    else:
+        solar_implication = "Poor solar conditions — significant generation reduction expected."
+
+    # Temperature implication
+    temp_loss_pct = max(0, (temp - 25) * 0.4)
+    if temp_loss_pct > 8:
+        temp_implication = f"High temperature is reducing panel efficiency by ~{temp_loss_pct:.1f}%."
+    else:
+        temp_implication = "Temperature within acceptable range for solar panels."
+
+    # Wind implication
+    if wind > 10:
+        wind_implication = "Strong wind — excellent turbine generation conditions."
+    elif wind > 6:
+        wind_implication = "Good wind speed — turbines operating near rated conditions."
+    elif wind > 3:
+        wind_implication = "Moderate wind — turbines generating at partial capacity."
+    else:
+        wind_implication = "Low wind speed — turbines near cut-in threshold."
+
+    return {
+        "location": loc["name"],
+        "data_mode": "simulated",
+        "weather": weather,
+        "location_context": {
+            "avg_irradiance": loc["avg_irradiance_kwh_m2_day"],
+            "avg_wind": loc["avg_wind_speed_ms"],
+            "season": adj["season"],
+            "seasonal_note": loc["seasonal_notes"].get(adj["season"], ""),
+        },
+        "implications": {
+            "solar": solar_implication,
+            "temperature": temp_implication,
+            "wind": wind_implication,
+            "temp_efficiency_loss_pct": round(temp_loss_pct, 1),
+        },
+    }
+
+
+# Rooftop Solar Request model
+class RooftopSolarRequest(BaseModel):
+    location_id: str = "ahmedabad"
+    capacity_kw: float = 5.0
+    panel_type: str = "monocrystalline"
+    system_age_years: float = 3.0
+    tilt_deg: float = 15.0
+    orientation: str = "south"
+    custom_tariff_inr: Optional[float] = None
+
+
+@app.post("/api/rooftop/analyze")
+def analyze_rooftop(req: RooftopSolarRequest):
+    """Analyze a rooftop solar installation."""
+    loc = get_location(req.location_id)
+    result = orchestrator.get_last_result()
+    weather = result.get("telemetry", {}).get("weather", {}) if result else {}
+
+    irr = weather.get("irradiance_wm2", 600)
+    temp = weather.get("temperature_c", 32)
+    tariff = req.custom_tariff_inr or loc["electricity_tariff_inr_kwh"]
+
+    perf = calculate_rooftop_performance(
+        capacity_kw=req.capacity_kw,
+        location_id=req.location_id,
+        irradiance_wm2=irr,
+        temperature_c=temp,
+        system_age_years=req.system_age_years,
+        panel_type=req.panel_type,
+        tilt_deg=req.tilt_deg,
+        orientation=req.orientation,
+    )
+
+    savings = calculate_savings(perf["daily_kwh"], tariff)
+
+    health = get_health_summary_simple(perf["performance_ratio"], [])
+
+    # Annual CO2
+    annual_kwh = perf["daily_kwh"] * 365
+    co2_annual_kg = annual_kwh * loc["grid_emission_factor"]
+
+    return {
+        "location": loc["name"],
+        "data_mode": "simulated",
+        "system": {
+            "capacity_kw": req.capacity_kw,
+            "panel_type": req.panel_type,
+            "age_years": req.system_age_years,
+            "orientation": req.orientation,
+        },
+        "performance": perf,
+        "savings": savings,
+        "health": health,
+        "environment": {
+            "annual_kwh": round(annual_kwh, 0),
+            "co2_avoided_annual_kg": round(co2_annual_kg, 0),
+            "co2_avoided_annual_tonnes": round(co2_annual_kg / 1000, 2),
+            "equivalent_trees": round(co2_annual_kg / 21, 0),  # ~21kg CO2 per tree per year
+        },
+        "recommendations": _rooftop_recommendations(perf, temp, irr, req.system_age_years),
+        "assumptions": [
+            "Simulated data — actual results depend on real installation conditions",
+            f"Tariff: INR {tariff}/kWh",
+            "Net metering credit not included",
+            f"Location: {loc['name']} (avg irradiance: {loc['avg_irradiance_kwh_m2_day']} kWh/m²/day)",
+        ],
+    }
+
+
+def _rooftop_recommendations(perf: Dict, temp: float, irr: float,
+                               age_years: float) -> List[str]:
+    recs = []
+    if perf["performance_ratio"] < 0.75:
+        recs.append("Performance is below expected — check for shading, dust, or inverter faults.")
+    if temp > 38:
+        recs.append(f"High panel temperature ({temp:.0f}°C) is reducing efficiency. Ensure good ventilation.")
+    if irr < 300:
+        recs.append("Low irradiance detected — possibly due to cloud cover or time of day.")
+    if age_years > 7:
+        recs.append(f"System is {age_years:.0f} years old — consider performance audit for degradation assessment.")
+    if not recs:
+        recs.append("System appears to be performing normally. Clean panels every 2–3 months for best results.")
+    return recs
+
+
+# Copilot now supports language and user mode
+@app.post("/api/copilot/v2")
+def ask_copilot_v2(req: CopilotRequest):
+    """Ask the Operations Copilot with language and user-mode support."""
+    try:
+        result = orchestrator.ask_copilot(req.question, req.language, req.user_mode)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/india/renewable-stats")
+def india_renewable_stats():
+    """Return India/Gujarat renewable energy context statistics."""
+    return {
+        "data_mode": "reference",
+        "source": "Ministry of New and Renewable Energy / CEA estimates",
+        "india": {
+            "total_renewable_gw": 190,
+            "solar_gw": 85,
+            "wind_gw": 46,
+            "target_2030_gw": 500,
+        },
+        "gujarat": {
+            "solar_gw": 10.5,
+            "wind_gw": 10.2,
+            "total_renewable_gw": 22,
+            "rank_solar": "Top 3 states",
+            "rank_wind": "Top 3 states",
+            "notable": "Home to India's largest solar park (Dholera)",
+        },
+        "locations": get_all_locations(),
+        "disclaimer": "Data sourced from publicly available government statistics — verify for latest figures.",
     }
 
 

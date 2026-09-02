@@ -6,6 +6,7 @@ import {
 
 interface OverviewProps {
   dashboard: any;
+  userMode?: string;
   onSelectAsset: (id: string) => void;
 }
 
@@ -29,7 +30,7 @@ function SeverityBadge({ severity }: { severity: string }) {
   return <span className={cls[severity] || 'badge-info'}>{severity.toUpperCase()}</span>;
 }
 
-export default function Overview({ dashboard, onSelectAsset }: OverviewProps) {
+export default function Overview({ dashboard, userMode = 'operator', onSelectAsset }: OverviewProps) {
   if (!dashboard) {
     return (
       <div className="flex items-center justify-center h-64 text-slate-500">
@@ -61,8 +62,42 @@ export default function Overview({ dashboard, onSelectAsset }: OverviewProps) {
     status: t.status,
   }));
 
+  const systemStatus = (ov.critical_alerts || 0) > 0 ? 'attention_required' :
+                       (ov.assets_at_risk || 0) > 0 ? 'monitor' : 'healthy';
+
   return (
     <div className="space-y-6">
+      {/* Simple mode status card */}
+      {userMode === 'simple' && (
+        <div className={`card border-2 ${
+          systemStatus === 'healthy' ? 'border-emerald-700/60 bg-emerald-950/20' :
+          systemStatus === 'monitor' ? 'border-amber-700/60 bg-amber-950/20' :
+          'border-red-700/60 bg-red-950/20'
+        }`}>
+          <div className="flex items-start gap-4">
+            <div className="text-3xl">
+              {systemStatus === 'healthy' ? '✅' : systemStatus === 'monitor' ? '⚠️' : '🔴'}
+            </div>
+            <div>
+              <div className="text-base font-bold text-white">
+                {systemStatus === 'healthy' ? 'Your Renewable System is Working Well' :
+                 systemStatus === 'monitor' ? 'Some Assets Need Monitoring' :
+                 'Attention Required — Issues Detected'}
+              </div>
+              <div className="text-sm text-slate-400 mt-1">
+                Today your park is generating <span className="text-white font-semibold">{((ov.total_kw || 0) / 1000).toFixed(1)} MW</span> of clean energy
+                {(ov.co2_avoided_today_t || 0) > 0 && `, avoiding <span className="text-emerald-400 font-semibold">${(ov.co2_avoided_today_t || 0).toFixed(1)} tonnes</span> of CO₂.`}
+              </div>
+              {(ov.daily_revenue_inr || 0) > 0 && (
+                <div className="text-sm text-emerald-400 mt-1">
+                  Estimated revenue today: ₹{((ov.daily_revenue_inr || 0) / 1000).toFixed(0)}K
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* KPI row */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <Stat label="Total Generation" value={`${((ov.total_kw || 0) / 1000).toFixed(1)} MW`} sub={`Expected: ${((ov.expected_kw || 0) / 1000).toFixed(1)} MW`} />
