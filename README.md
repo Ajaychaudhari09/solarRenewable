@@ -277,55 +277,126 @@ cd backend
 
 ---
 
-## Limitations & Honesty
+## Challenge 14 — Part 2: Auth, User Management, Real Data & Public Access
 
-- **Simulated data** — all telemetry is synthetic (deterministic seed 42)
-- **Prototype forecasts** — exponential smoothing + linear trend, not production-grade ML
-- **No real turbine control** — this is a decision-support system only
-- **Failure probability** — logistic model with simplified features, not a certified maintenance tool
-- **No real-time field deployment** — hackathon prototype
+### 1. Unified Launch with Public Tunnel (`start-all.bat`)
+To start the entire full stack (MongoDB connectivity check + Express API server + React dev server + localtunnel public link):
 
----
-
-## Future Roadmap
-
-- Real SCADA/MODBUS data ingestion
-- Time-series database (InfluxDB / TimescaleDB)
-- Multi-site deployment (Kutch + Banaskantha separate instances)
-- Certified predictive maintenance models (IEC 61400)
-- Mobile operator app
-- Executive reporting with automated PDF generation
-- Full watsonx.ai Granite integration with fine-tuned renewable energy domain data
-
----
-
-## Project Structure
-
-```
-solarRenewable/
-├── backend/
-│   ├── agents/              # 28 analytical agents
-│   ├── orchestration/       # Central orchestrator
-│   ├── services/            # IBM Granite service
-│   ├── simulation/          # Telemetry simulation engine
-│   ├── models/              # Pydantic data models
-│   ├── tests/               # 13 pytest tests
-│   └── main.py              # FastAPI application
-├── frontend/
-│   └── src/
-│       ├── components/      # 10 React dashboard components
-│       ├── App.tsx          # Main application
-│       └── api.ts           # API client
-├── docs/
-│   ├── architecture.md
-│   ├── agents.md
-│   ├── demo.md
-│   └── deployment.md
-├── apikey.json              # IBM Cloud API key (gitignored)
-├── ibm-credentials.env      # IBM credentials (gitignored)
-└── README.md
+```bat
+start-all.bat
 ```
 
+This script automatically:
+1. Verifies that local MongoDB (`mongod` on port 27017) is reachable, or launches resilient fallback mode
+2. Launches the Express API server on `http://localhost:5000`
+3. Launches the Vite React frontend on `http://localhost:5173`
+4. Spawns `npx localtunnel --port 5173` to expose a live public URL for remote access
+5. Prints:
+   - `LOCAL:` http://localhost:5173
+   - `PUBLIC (share this link):` `https://<tunnel-id>.loca.lt`
+
+> [!WARNING]
+> **Public Tunnel Security Notice:**
+> The public URL remains live only while the `start-all.bat` terminal window stays open. Anyone possessing this link can access the dashboard.
+> By default, open registration is enabled so evaluators can create test accounts. Before sharing this link widely, **disable open self-registration** as described below!
+
 ---
 
-*Built with IBM Bob · IBM Granite · IBM Cloud · React · FastAPI · Python*
+### 2. Disabling Open Self-Registration (Prompt 25 Requirement)
+By default, `ALLOW_OPEN_REGISTRATION=true` in `.env`, which allows anyone with the URL to register a viewer account.
+
+To restrict account creation to **administrators only**:
+1. Open `.env` in the project root.
+2. Change:
+   ```env
+   ALLOW_OPEN_REGISTRATION=false
+   ```
+3. Restart the Express server (`node src/server/index.js` or restart `start-all.bat`).
+4. Any non-admin attempting `POST /api/auth/register` will now be rejected with `403 Forbidden`. Only authenticated administrators will be able to register new accounts.
+
+---
+
+### 3. Database & Mongoose Schemas (Prompt 15)
+The platform connects to local MongoDB at `mongodb://localhost:27017/gridpulse` (configured in `src/server/db.js`).
+
+Collections & Schemas:
+- **`User`**: `{ name, email (unique), passwordHash, role: "admin"|"operator"|"viewer", status: "active"|"disabled", createdAt, lastLogin }`
+- **`Asset`**: `{ assetId, siteName: "Kutch"|"Banaskantha", type: "solar"|"wind", capacityMW, lat, long, installDate, status, createdBy, updatedAt }`
+- **`TelemetrySnapshot`**: `{ assetId, timestamp, outputMW, source: "weather-model", weatherSnapshot }`
+- **`MaintenanceTicket`**: `{ assetId, urgency: "low"|"medium"|"high"|"critical", recommendedAction, estimatedDowntimeHrs, status: "open"|"in-progress"|"resolved", createdAt, resolvedAt }`
+- **`AuditLog`**: `{ userId, action, targetType, targetId, details, timestamp }`
+
+#### Seeding Initial Administrator:
+To seed the initial admin user without hardcoding credentials:
+```bash
+node src/server/seed.js
+```
+The CLI will interactively prompt for your admin name, email, and password (min 8 chars, hashed with bcrypt 10 rounds). The `Asset` collection is intentionally left empty so you can experience the onboarding flow in the UI.
+
+---
+
+### 4. Role-Based Access Control (RBAC) (Prompt 17)
+The platform implements strict JWT role-based middleware (`src/server/middleware/auth.js`):
+- **Viewer**: Read-only access to Dashboard, Asset Explorer, and Weather Forecasts.
+- **Operator**: Viewer permissions + ability to acknowledge and update maintenance tickets (`open` → `in-progress` → `resolved`) and evaluate grid recommendations.
+- **Admin**: Full Operator permissions + User Management panel (change user roles, soft-delete/disable accounts) + Asset CRUD (create, edit, delete solar/wind assets).
+- **Audit Logging**: Every state-changing mutation writes an immutable entry into `AuditLog`.
+
+---
+
+### 5. Real Live Weather Integration (Open-Meteo) (Prompt 21)
+Weather data is fetched directly from the Open-Meteo API using exact geographical coordinates:
+- **Kutch Hybrid Park**: `23.73° N, 69.86° E`
+- **Banaskantha Solar-Wind Park**: `24.17° N, 72.44° E`
+- Telemetry: Ambient temperature, wind speed at 10m, global horizontal shortwave radiation (GHI), direct normal irradiance (DNI), and cloud cover.
+- Responses are cached in-memory for **15 minutes**.
+- If the live API fails, the application automatically falls back to cached forecasts and displays:
+  `"using cached weather (last updated Xm ago)"`.
+- Labeled throughout the UI as: `"Live weather: Open-Meteo"`.
+
+---
+
+### 6. Weather-Driven Generation Model (Prompt 22)
+Generation output is computed deterministically in `src/lib/generationModel.js` based on live weather physics:
+- **Solar PV**:
+  $$\text{Output (MW)} = \text{capacityMW} \times \frac{\text{Shortwave Radiation}}{1000\,\text{W/m}^2} \times [1 - 0.004 \times (\text{Temp} + 15 - 25)]$$
+  Clamped strictly to $[0, \text{capacityMW}]$.
+- **Wind Turbines**:
+  Cubic power curve:
+  $$\text{Ratio} = \left(\frac{v - 3.5}{12.5 - 3.5}\right)^3 \quad \text{for } 3.5 \le v \le 12.5\,\text{m/s}$$
+  Rated capacity between $12.5$ and $25.0\,\text{m/s}$. Cut-out at $25\,\text{m/s}$ (shutdown for storm safety).
+- **Realistic Physical Noise**: $\pm 3\text{--}5\%$ natural turbulence variance added.
+- **Snapshots**: Automatically saved to the `TelemetrySnapshot` collection with `source: "weather-model"`.
+- Labeled in all charts and KPI cards as:
+  `"Generation: modeled from live weather data — not live SCADA"`.
+
+---
+
+### 7. Historical Predictive Analytics with IBM Granite (Prompt 23)
+- In `src/server/routes/maintenance.js`, the platform analyzes up to 30 days of stored `TelemetrySnapshot` records per asset.
+- Computes mathematical time-series trend statistics:
+  - 30-day rolling average output & capacity factor
+  - Rate of decline (% drop between halves of the window)
+  - Historical output variance ($\sigma$)
+- **Minimum History Guard**: If an asset has less than 3 days of recorded history, prediction is safely skipped:
+  `"Insufficient history yet — check back after a few days of data"`.
+- When $\ge 3$ days exist, computed trend statistics are passed to **IBM Granite LLM** (`ibm/granite-13b-instruct-v2`) via watsonx.ai to synthesize an engineering root-cause narrative and prioritize corrective action.
+- Generated maintenance tickets are saved directly to MongoDB so they persist across sessions.
+
+---
+
+### 8. Decluttered Navigation UI (Prompt 24)
+- Left sidebar navigation replacing clutter:
+  - ⚡ **Dashboard**: Focused KPI summary row, single 24h generation chart, Open-Meteo live weather strip, alerts panel.
+  - 🏭 **Assets**: MongoDB inventory table with add/edit/delete modals and onboarding prompt.
+  - 🔧 **Maintenance**: 30-day historical time-series analytics + Granite LLM diagnostic + persisted ticket workflow.
+  - ⚙️ **Grid Optimization**: Real-time curtailment prevention and battery balancing.
+  - 👥 **User Management**: Admin-only user role modification and account deactivation.
+  - 💬 **AI Copilot**: Natural language conversational assistant powered by IBM Granite.
+- Responsive design collapsing to a mobile hamburger menu below 768px.
+- Strictly curated color palette: Electric Blue (`#3b82f6`) and Solar Amber (`#f59e0b`) on Slate dark theme.
+
+---
+
+*Built for IBM Hackathon · Challenge 14: Smart Renewable Energy (Solar-Wind Hybrid) Asset Monitoring for Kutch & Banaskantha · Powered by IBM Granite LLM + MongoDB*
+

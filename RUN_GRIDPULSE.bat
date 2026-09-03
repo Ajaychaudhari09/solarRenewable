@@ -62,20 +62,20 @@ if errorlevel 1 (
 )
 
 REM ── Frontend dependencies ────────────────────────────────
-cd /d "%~dp0frontend"
+cd /d "%~dp0"
 
 if not exist "node_modules" (
-    echo [Frontend] Installing npm packages (this may take a minute)...
-    call npm install --silent
+    echo [Frontend] Installing npm packages in main node_modules...
+    call npm install
     if errorlevel 1 (
-        echo [ERROR] Failed to install frontend dependencies.
-        echo Run manually: cd frontend ^&^& npm install
+        echo [ERROR] Failed to install npm dependencies.
+        echo Run manually: npm install
         pause
         exit /b 1
     )
-    echo [OK] Frontend dependencies installed.
+    echo [OK] Dependencies installed in main node_modules.
 ) else (
-    echo [OK] Frontend dependencies ready.
+    echo [OK] Main dependencies ready.
 )
 
 echo.
@@ -83,29 +83,28 @@ echo ========================================
 echo          Starting Services
 echo ========================================
 echo.
-echo  Backend API : http://localhost:8000
+echo  Express API : http://localhost:5000
 echo  Dashboard   : http://localhost:5173
-echo  API Docs    : http://localhost:8000/docs
 echo.
 echo  Press Ctrl+C in each window to stop.
 echo ========================================
 echo.
 
-REM ── Start Backend ─────────────────────────────────────────
-cd /d "%~dp0backend"
-echo [Backend] Starting API server...
-start "GridPulse Backend" cmd /k "title GridPulse Backend && cd /d "%~dp0backend" && python main.py"
+REM ── Start Express API ───────────────────────────────────────
+cd /d "%~dp0"
+echo [Server] Starting Express API server...
+start "GridPulse Express API" cmd /k "title GridPulse Express API && cd /d "%~dp0" && node src/server/index.js"
 
 REM Wait a moment for backend to boot
 timeout /t 3 /nobreak >nul
 
 REM ── Start Frontend ───────────────────────────────────────
-cd /d "%~dp0frontend"
+cd /d "%~dp0"
 echo [Frontend] Starting dashboard...
-start "GridPulse Frontend" cmd /k "title GridPulse Frontend && cd /d "%~dp0frontend" && npm run dev"
+start "GridPulse Frontend" cmd /k "title GridPulse Frontend && cd /d "%~dp0" && npm run dev"
 
 REM Wait for frontend to start
-timeout /t 4 /nobreak >nul
+timeout /t 3 /nobreak >nul
 
 REM ── Open Browser ─────────────────────────────────────────
 echo [Browser] Opening GridPulse AI...
